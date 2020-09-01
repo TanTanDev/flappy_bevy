@@ -20,11 +20,39 @@ struct Animations {
     current_animation: i32,
 }
 
+struct CloudTimer(Timer);
+
+fn cloud_spawn_system(mut commands: Commands, time: Res<Time>, mut cloud_timer: ResMut<CloudTimer>, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<ColorMaterial>>)
+{
+   
+    let mut rng = thread_rng();
+    let cloud_texture = match rng.gen_bool(0.5) {
+        true => 
+            asset_server.load("assets/cloud_1.png").unwrap()
+        ,
+        false => 
+            asset_server.load("assets/cloud_2.png").unwrap()
+    };
+
+    cloud_timer.0.tick(time.delta_seconds);
+    if cloud_timer.0.finished {
+        commands.spawn(SpriteComponents {
+            material: materials.add(cloud_texture.into()),
+            scale: Scale(rng.gen_range(6.0, 30.0)),
+            translation: Translation(Vec3::new(1920.0*0.5+30.0*43.0, rng.gen_range(-1280.0*0.5, 1280.0*0.5), 0.0)),
+            .. Default::default()
+        })
+        .with(Velocity(Vec2::new(rng.gen_range(-700.0, -400.0), rng.gen_range(-10.0, 10.0))));
+    }
+}
+
 struct SpawnTimer {
     timer: Timer,
     // center pos of pipes, in precentage
     last_pos: f32,
 }
+
+struct OffsceenDeletion;
 
 struct PipeSpawnSettings {
     min_time: f32,
@@ -36,6 +64,7 @@ struct PipeSpawnSettings {
     max_center_delta: f32,
 }
 
+#[derive(PartialEq)]
 enum Collider {
     Solid,
     ScoreGiver,
@@ -56,8 +85,10 @@ struct StartScreen;
 struct EndScreen;
 struct Player;
 struct Pipe;
-struct Velocity(f32);
+struct Velocity(Vec2);
 struct Gravity(f32);
+struct JumpHeight(f32);
+struct AffectedByGravity;
 struct VelocityRotator {
     angle_up: f32,
     angle_down: f32,
@@ -76,12 +107,16 @@ fn main() {
         .add_system(handle_gamestate_system.system())
         .add_system(player_collision_system.system())
         .add_system(velocity_system.system())
+        .add_system(gravity_system.system())
         .add_system(velocity_rotator_system.system())
         .add_system(spawn_pipe_system.system())
-        .add_system(pipe_move_system.system())
-        .add_system(pipe_remove_system.system())
+        //.add_system(pipe_move_system.system())
+        .add_system(offscreen_remove_system.system())
+        .add_system(cloud_spawn_system.system())
         .add_resource(ClearColor(Color::rgb(0.34, 0.75, 0.79)))
-        .add_resource(Gravity(45.0))
+        .add_resource(JumpHeight(23.0*40.0))
+        .add_resource(Gravity(45.0*40.0))
+        .add_resource(CloudTimer(Timer::from_seconds(1.0, true)))
         .add_resource(GameData {
             game_state: GameState::Menu,
             score: 0,
@@ -101,15 +136,20 @@ fn main() {
         .run();
 }
 
-fn pipe_remove_system(
+fn offscreen_remove_system(
     mut commands: Commands,
-    mut pipe_query: Query<(Entity, &mut Translation, &Pipe)>,
+    mut worlds: Query<&mut World>,
+    mut pipe_query: Query<(Entity, &mut Translation, &OffsceenDeletion)>,
 ) {
     let padding = 300.0;
     for (entity, translation, _pipe) in &mut pipe_query.iter() {
         // Left side of screen
         if translation.0.x() < -1920.0 * 0.5 - padding {
-            commands.despawn(entity);
+            for world in &mut worlds.iter() {
+                if !world.contains(entity) {
+                    commands.despawn(entity);
+                }
+            }
         }
     }
 }
@@ -120,7 +160,7 @@ fn velocity_rotator_system(
     velocity_rotator: Mut<VelocityRotator>,
 ) {
     //let quat = Quat::from_rotation_z(velocity_rotator.).lerp();
-    let mut procentage = velocity.0 / velocity_rotator.velocity_max;
+    let mut procentage = velocity.0.y() / velocity_rotator.velocity_max;
     procentage = procentage.max(-1.0);
     procentage = procentage.min(1.0);
     // convert from -1 -> 1 to: 0 -> 1
@@ -133,13 +173,18 @@ fn velocity_rotator_system(
     rotation.0 = Quat::from_rotation_z(rad_angle);
 }
 
-fn handle_gamestate_system(mut game_data: ResMut<GameData>, keyboard_input: Res<Input<KeyCode>>, mut player_query: Query<(&Player, &mut Translation, &mut Velocity)>,
-mut end_screen_query: Query<(&EndScreen, &mut Draw)>, mut start_screen_query: Query<(&StartScreen, &mut Draw)>) {
+fn handle_gamestate_system(
+    mut game_data: ResMut<GameData>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut player_query: Query<(&Player, &mut Translation, &mut Velocity)>,
+    mut end_screen_query: Query<(&EndScreen, &mut Draw)>,
+    mut start_screen_query: Query<(&StartScreen, &mut Draw)>,
+) {
     match game_data.game_state {
         GameState::Menu => {
             if keyboard_input.just_pressed(KeyCode::Space) {
                 game_data.game_state = GameState::Playing;
-                for(_ss, mut draw) in &mut start_screen_query.iter() {
+                for (_ss, mut draw) in &mut start_screen_query.iter() {
                     draw.is_visible = false;
                 }
             }
@@ -148,11 +193,11 @@ mut end_screen_query: Query<(&EndScreen, &mut Draw)>, mut start_screen_query: Qu
         GameState::Dead => {
             if keyboard_input.just_pressed(KeyCode::Space) {
                 game_data.game_state = GameState::Playing;
-                for (_p, mut translation, mut velocity) in &mut player_query.iter(){
-                    translation.0 = Vec3::new(0.0,0.0,0.0);
-                    velocity.0 = 0.0;
+                for (_p, mut translation, mut velocity) in &mut player_query.iter() {
+                    translation.0 = Vec3::new(0.0, 0.0, 100.0);
+                    velocity.0.set_y(0.0);
                 }
-                for(_es, mut draw) in &mut end_screen_query.iter() {
+                for (_es, mut draw) in &mut end_screen_query.iter() {
                     draw.is_visible = false;
                 }
             }
@@ -162,6 +207,7 @@ mut end_screen_query: Query<(&EndScreen, &mut Draw)>, mut start_screen_query: Qu
 
 fn player_input(
     game_data: Res<GameData>,
+    jump_height: Res<JumpHeight>,
     keyboard_input: Res<Input<KeyCode>>,
     _player: Mut<Player>,
     mut animations: Mut<Animations>,
@@ -170,10 +216,10 @@ fn player_input(
 ) {
     match game_data.game_state {
         GameState::Menu => {
-            handle_stay_in_screen(animations, velocity, translation);
+            handle_stay_in_screen(jump_height, animations, velocity, translation);
         }
         GameState::Playing => {
-            handle_jump(keyboard_input, animations, velocity);
+            handle_jump(keyboard_input, jump_height, animations, velocity);
         }
         GameState::Dead => {}
     }
@@ -187,21 +233,24 @@ fn player_input(
 }
 
 // Auto jump until input is given
-fn handle_stay_in_screen(mut animations: Mut<Animations>, mut velocity: Mut<Velocity>, translation: Mut<Translation>)
-{
+fn handle_stay_in_screen(
+    jump_height: Res<JumpHeight>,
+    mut animations: Mut<Animations>,
+    mut velocity: Mut<Velocity>,
+    translation: Mut<Translation>,
+) {
     if translation.0.y() < 0.0 {
-
         animations.current_animation += 1;
         if animations.current_animation as usize >= animations.animations.len() {
             animations.current_animation = 0;
         }
-        velocity.0 = 20.0;
+        velocity.0.set_y(jump_height.0);
     }
-
 }
 
 fn handle_jump(
     keyboard_input: Res<Input<KeyCode>>,
+    jump_height: Res<JumpHeight>,
     mut animations: Mut<Animations>,
     mut velocity: Mut<Velocity>,
 ) {
@@ -210,19 +259,29 @@ fn handle_jump(
         if animations.current_animation as usize >= animations.animations.len() {
             animations.current_animation = 0;
         }
-        velocity.0 = 20.0;
+        velocity.0.set_y(jump_height.0);
     }
 }
 
-fn velocity_system(
+fn gravity_system(
     gravity: Res<Gravity>,
     time: Res<Time>,
-    mut position: Mut<Translation>,
+    _affected_by_gravity: &AffectedByGravity,
     mut velocity: Mut<Velocity>,
 ) {
-    velocity.0 -= gravity.0 * time.delta_seconds;
+    *velocity.0.y_mut() -= gravity.0 * time.delta_seconds;
+}
+
+fn velocity_system(
+    time: Res<Time>,
+    mut position: Mut<Translation>,
+    velocity: Mut<Velocity>,
+) {
     let y = position.0.y();
-    position.0.set_y(y + velocity.0);
+    let x = position.0.x();
+    let delta = time.delta_seconds;
+    position.0.set_y(y + velocity.0.y() * delta);
+    position.0.set_x(x + velocity.0.x() * delta);
 }
 
 fn animate_system(
@@ -273,15 +332,15 @@ fn animate_sprite_system(
     }
 }
 
-fn pipe_move_system(
-    time: Res<Time>,
-    pipe_settings: Res<PipeSpawnSettings>,
-    _pipe: Mut<Pipe>,
-    mut translation: Mut<Translation>,
-) {
-    let x_pos = translation.0.x_mut();
-    *x_pos += time.delta_seconds * pipe_settings.speed;
-}
+// fn pipe_move_system(
+//     time: Res<Time>,
+//     pipe_settings: Res<PipeSpawnSettings>,
+//     _pipe: Mut<Pipe>,
+//     mut translation: Mut<Translation>,
+// ) {
+//     let x_pos = translation.0.x_mut();
+//     *x_pos += time.delta_seconds * pipe_settings.speed;
+// }
 
 fn spawn_pipe_system(
     mut commands: Commands,
@@ -312,7 +371,7 @@ fn spawn_pipe_system(
         );
 
     // sorry for the hardcoded values
-    // This is the extent from the center, a pipe can go maximum, until it flies in the air
+    // This is the extent from the center in Y, a pipe can go maximum, until it flies in the air
     let clamp_range = (1280.0 - (6.0 * 128.0)) / 1280.0;
 
     // Clamp func seem to be nightly only for now
@@ -334,6 +393,7 @@ fn spawn_pipe_system(
     );
     // half the size because both pipes will be offseted in opposide direction
     pipe_delta *= 0.5;
+    let x_pos = 1920.0 * 0.5 + pipe_offset_x;
 
     // lower pipe
     commands
@@ -346,13 +406,15 @@ fn spawn_pipe_system(
                 render_commands: Vec::new(),
             },
             translation: Translation::new(
-                1920.0 * 0.5 + pipe_offset_x,
+                x_pos,
                 -pipe_offset_y + new_center_pos - pipe_delta,
                 0.0,
             ),
             ..Default::default()
         })
+        .with(Velocity(Vec2::new(pipe_settings.speed,0.0)))
         .with(Pipe)
+        .with(OffsceenDeletion)
         .with(Collider::Solid);
     // higher pipe
     commands
@@ -365,7 +427,7 @@ fn spawn_pipe_system(
                 render_commands: Vec::new(),
             },
             translation: Translation::new(
-                1920.0 * 0.5 + pipe_offset_x,
+                x_pos,
                 pipe_offset_y + new_center_pos + pipe_delta,
                 0.0,
             ),
@@ -373,26 +435,45 @@ fn spawn_pipe_system(
             ..Default::default()
         })
         .with(Pipe)
+        .with(OffsceenDeletion)
+        .with(Velocity(Vec2::new(pipe_settings.speed,0.0)))
         .with(Collider::Solid);
+
+    // score collider offseted by half player size
+    let score_offset = Vec3::new(32.0*6.0*0.5, 0.0, 0.0); 
+    commands.spawn((
+        Translation(score_offset + Vec3::new(x_pos, 0.0, 0.0)),
+        Collider::ScoreGiver,
+        Velocity(Vec2::new(pipe_settings.speed, 0.0)),
+    ))
+    .with(OffsceenDeletion);
 }
 
 fn player_bounds_system(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
-    mut player_query: Query<(&Player, &Translation, &mut Velocity)>,
+    mut player_query: Query<(&Player, &mut Translation, &mut Velocity)>,
     mut pipe_query: Query<(&Pipe, &Translation, &Collider, &Sprite, Entity)>,
+    mut score_collider_query: Query<(&Translation, &Collider, Entity)>,
     mut end_screen_query: Query<(&EndScreen, &mut Draw)>,
 ) {
-    let half_screen_size = 1280.0*0.5;
-    let player_size = 32.0*6.0;
-    for(_p, translation, mut velocity) in &mut player_query.iter() {
+    let half_screen_size = 1280.0 * 0.5;
+    let player_size = 32.0 * 6.0;
+    for (_p, mut translation, mut velocity) in &mut player_query.iter() {
         // bounce against ceiling
         if translation.0.y() > half_screen_size - player_size {
-            velocity.0 = -3.0;
+            velocity.0.set_y(-3.0);
+            translation.0.set_y(half_screen_size - player_size);
         }
         // death on bottom touch
         if translation.0.y() < -half_screen_size {
-            trigger_death(&mut commands, &mut game_data, &mut pipe_query, &mut end_screen_query);
+            trigger_death(
+                &mut commands,
+                &mut game_data,
+                &mut pipe_query,
+                &mut score_collider_query,
+                &mut end_screen_query,
+            );
         }
     }
 }
@@ -400,19 +481,45 @@ fn player_bounds_system(
 fn player_collision_system(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
+    mut worlds: Query<(&mut World)>,
     mut player_query: Query<(&Player, &Translation)>,
     mut pipe_query: Query<(&Pipe, &Translation, &Collider, &Sprite, Entity)>,
+    mut score_collider_query: Query<(&Translation, &Collider, Entity)>,
     mut end_screen_query: Query<(&EndScreen, &mut Draw)>,
 ) {
+    // Player size can't be fetched from AtlasTextureSprite, so I'm hard coding it here...
+    let mut player_size = 6.0 * 32.0;
+    // Make player hitbox half size, to feel more fair
+    player_size *= 0.4;
+    let player_size_vec = (player_size, player_size);
     for (_player, player_translation) in &mut player_query.iter() {
+        for (translation, collider, entity) in &mut score_collider_query.iter() {
+            if *collider != Collider::ScoreGiver {
+                continue;
+            }
+            let collision = collide(
+                player_translation.0,
+                player_size_vec.into(),
+                translation.0,
+                Vec2::new(10.0, 1280.0),
+            );
+            if collision.is_some() {
+                game_data.score += 1;
+                println!("got score!: {}", game_data.score);
+                // Remove coin collider, quick simple solution
+            for world in &mut worlds.iter() {
+                if !world.contains(entity) {
+                    commands.despawn(entity);
+                }
+            }
+
+            }
+        }
         // Check for collision
         let mut did_collide = false;
-        for (_pipe, pipe_translation, _collider, pipe_sprite, _pipe_entity) in &mut pipe_query.iter() {
-            // Player size can't be fetched from AtlasTextureSprite, so I'm hard coding it here...
-            let mut player_size = 6.0 * 32.0;
-            // Make player hitbox half size, to feel more fair
-            player_size *= 0.4;
-            let player_size_vec = (player_size, player_size);
+        for (_pipe, pipe_translation, _collider, pipe_sprite, _pipe_entity) in
+            &mut pipe_query.iter()
+        {
             let collision = collide(
                 player_translation.0,
                 player_size_vec.into(),
@@ -425,29 +532,37 @@ fn player_collision_system(
             }
         }
         if did_collide {
-            trigger_death(&mut commands, &mut game_data,&mut  pipe_query,&mut  end_screen_query);
-            // game_data.game_state = GameState::Dead;
-            // // Despawn all pipes
-            // for(_p, _pt, _c, _ps, pipe_entity) in &mut pipe_query.iter() {
-            //     commands.despawn(pipe_entity);
-            // }
-            // for(_es, mut draw) in &mut end_screen_query.iter() {
-            //     draw.is_visible = true;
-            // }
+            trigger_death(
+                &mut commands,
+                &mut game_data,
+                &mut pipe_query,
+                &mut score_collider_query,
+                &mut end_screen_query,
+            );
         }
     }
 }
 
-fn trigger_death(commands: &mut Commands, game_data: &mut ResMut<GameData>,
+fn trigger_death(
+    commands: &mut Commands,
+    game_data: &mut ResMut<GameData>,
     mut pipe_query: &mut Query<(&Pipe, &Translation, &Collider, &Sprite, Entity)>,
+    mut score_query: &mut Query<(&Translation, &Collider, Entity)>,
     mut end_screen_query: &mut Query<(&EndScreen, &mut Draw)>,
-){
+) {
     game_data.game_state = GameState::Dead;
+    game_data.score = 0;
     // Despawn all pipes
-    for(_p, _pt, _c, _ps, pipe_entity) in &mut pipe_query.iter() {
+    for (_p, _pt, _c, _ps, pipe_entity) in &mut pipe_query.iter() {
         commands.despawn(pipe_entity);
     }
-    for(_es, mut draw) in &mut end_screen_query.iter() {
+    // Despawn score colliders
+    for (_t, collider, score_entity) in &mut score_query.iter() {
+        if *collider == Collider::ScoreGiver {
+            commands.despawn(score_entity);
+        }
+    }
+    for (_es, mut draw) in &mut end_screen_query.iter() {
         draw.is_visible = true;
     }
 }
@@ -493,7 +608,7 @@ fn setup(
         .spawn(SpriteSheetComponents {
             texture_atlas: texture_atlas_handle,
             scale: Scale(6.0),
-            translation: Translation::new(0.0, 0.0, 1.0),
+            translation: Translation::new(0.0, 0.0, 100.0),
             draw: Draw {
                 is_transparent: true,
                 is_visible: true,
@@ -503,12 +618,13 @@ fn setup(
         })
         .with(Timer::from_seconds(0.1, true))
         .with(Player)
+        .with(AffectedByGravity)
         .with(VelocityRotator {
             angle_up: std::f32::consts::PI * 0.5 * 0.7,
             angle_down: -std::f32::consts::PI * 0.5 * 0.5,
-            velocity_max: 20.0,
+            velocity_max: 400.0,
         })
-        .with(Velocity(0.0))
+        .with(Velocity(Vec2::zero()))
         .with(Animations {
             animations: vec![
                 Animation {
