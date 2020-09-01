@@ -24,7 +24,6 @@ struct CloudTimer(Timer);
 
 fn cloud_spawn_system(mut commands: Commands, time: Res<Time>, mut cloud_timer: ResMut<CloudTimer>, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<ColorMaterial>>)
 {
-   
     let mut rng = thread_rng();
     let cloud_texture = match rng.gen_bool(0.5) {
         true => 
@@ -39,10 +38,44 @@ fn cloud_spawn_system(mut commands: Commands, time: Res<Time>, mut cloud_timer: 
         commands.spawn(SpriteComponents {
             material: materials.add(cloud_texture.into()),
             scale: Scale(rng.gen_range(6.0, 30.0)),
-            translation: Translation(Vec3::new(1920.0*0.5+30.0*43.0, rng.gen_range(-1280.0*0.5, 1280.0*0.5), 0.0)),
+            translation: Translation(Vec3::new(1920.0*0.5+30.0*43.0, rng.gen_range(-1280.0*0.5, 1280.0*0.5), 2.0)),
             .. Default::default()
         })
         .with(Velocity(Vec2::new(rng.gen_range(-700.0, -400.0), rng.gen_range(-10.0, 10.0))));
+    }
+}
+
+struct MountainTimer(Timer);
+
+fn mountain_spawn_system(mut commands: Commands, time: Res<Time>, mut mountain_timer: ResMut<MountainTimer>, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<ColorMaterial>>)
+{
+    let mut rng = thread_rng();
+    let mountain_texture = match rng.gen_bool(0.5) {
+        true => 
+            asset_server.load("assets/mountain.png").unwrap()
+        ,
+        false => 
+            asset_server.load("assets/mountain.png").unwrap()
+    };
+
+    mountain_timer.0.tick(time.delta_seconds);
+    if mountain_timer.0.finished {
+        commands.spawn(SpriteComponents {
+            scale: Scale(3.0),
+            material: materials.add(ColorMaterial::modulated_texture(mountain_texture, Color::rgb(0.36,0.36,0.36))),
+            translation: Translation(Vec3::new(1920.0*0.5+30.0*43.0, -1280.0*0.5, 0.2)),
+            .. Default::default()
+        })
+        .with(OffsceenDeletion)
+        .with(Velocity(Vec2::new(-200.0, 0.0)));
+        commands.spawn(SpriteComponents {
+            scale: Scale(3.0),
+            translation: Translation(Vec3::new(1920.0*0.5+30.0*43.0, -1280.0*0.5-100.0, 0.3)),
+            material: materials.add(ColorMaterial::modulated_texture(mountain_texture, Color::rgb(0.26,0.26,0.26))),
+            .. Default::default()
+        })
+        .with(OffsceenDeletion)
+        .with(Velocity(Vec2::new(-400.0, 0.0)));
     }
 }
 
@@ -109,6 +142,8 @@ fn main() {
         .add_system(velocity_system.system())
         .add_system(gravity_system.system())
         .add_system(velocity_rotator_system.system())
+        .add_system(velocity_animator_system.system())
+        .add_system(mountain_spawn_system.system())
         .add_system(spawn_pipe_system.system())
         //.add_system(pipe_move_system.system())
         .add_system(offscreen_remove_system.system())
@@ -117,6 +152,7 @@ fn main() {
         .add_resource(JumpHeight(23.0*40.0))
         .add_resource(Gravity(45.0*40.0))
         .add_resource(CloudTimer(Timer::from_seconds(1.0, true)))
+        .add_resource(MountainTimer(Timer::from_seconds(3.0, true)))
         .add_resource(GameData {
             game_state: GameState::Menu,
             score: 0,
@@ -210,55 +246,47 @@ fn player_input(
     jump_height: Res<JumpHeight>,
     keyboard_input: Res<Input<KeyCode>>,
     _player: Mut<Player>,
-    mut animations: Mut<Animations>,
     mut translation: Mut<Translation>,
     mut velocity: Mut<Velocity>,
 ) {
     match game_data.game_state {
         GameState::Menu => {
-            handle_stay_in_screen(jump_height, animations, velocity, translation);
+            handle_stay_in_screen(jump_height, velocity, translation);
         }
         GameState::Playing => {
-            handle_jump(keyboard_input, jump_height, animations, velocity);
+            handle_jump(keyboard_input, jump_height, velocity);
         }
         GameState::Dead => {}
     }
-    // if keyboard_input.just_pressed(KeyCode::Space) {
-    //     animations.current_animation += 1;
-    //     if animations.current_animation as usize >= animations.animations.len() {
-    //         animations.current_animation = 0;
-    //     }
-    //     velocity.0 = 20.0;
-    // }
 }
 
 // Auto jump until input is given
 fn handle_stay_in_screen(
     jump_height: Res<JumpHeight>,
-    mut animations: Mut<Animations>,
     mut velocity: Mut<Velocity>,
     translation: Mut<Translation>,
 ) {
     if translation.0.y() < 0.0 {
-        animations.current_animation += 1;
-        if animations.current_animation as usize >= animations.animations.len() {
-            animations.current_animation = 0;
-        }
         velocity.0.set_y(jump_height.0);
+    }
+}
+
+fn velocity_animator_system(mut query: Query<(&mut Animations, &Velocity)>) {
+    for (mut animations, velocity) in &mut query.iter() {
+        if velocity.0.y() > 0.0 {
+            animations.current_animation = 0;
+        } else {
+            animations.current_animation = 1;
+        }
     }
 }
 
 fn handle_jump(
     keyboard_input: Res<Input<KeyCode>>,
     jump_height: Res<JumpHeight>,
-    mut animations: Mut<Animations>,
     mut velocity: Mut<Velocity>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        animations.current_animation += 1;
-        if animations.current_animation as usize >= animations.animations.len() {
-            animations.current_animation = 0;
-        }
         velocity.0.set_y(jump_height.0);
     }
 }
@@ -408,7 +436,7 @@ fn spawn_pipe_system(
             translation: Translation::new(
                 x_pos,
                 -pipe_offset_y + new_center_pos - pipe_delta,
-                0.0,
+                3.0,
             ),
             ..Default::default()
         })
@@ -429,7 +457,7 @@ fn spawn_pipe_system(
             translation: Translation::new(
                 x_pos,
                 pipe_offset_y + new_center_pos + pipe_delta,
-                0.0,
+                3.0,
             ),
             rotation: Rotation::from_rotation_z(std::f32::consts::PI),
             ..Default::default()
@@ -651,7 +679,7 @@ fn setup(
                 Animation {
                     current_frame: 0,
                     frames: vec![AnimationFrame {
-                        index: 0,
+                        index: 3,
                         time: 0.2,
                     }],
                 },
