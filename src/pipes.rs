@@ -1,13 +1,13 @@
-use bevy::prelude::*;
-use rand::{thread_rng, Rng};
-use crate::physics;
 use crate::bounds_deletion;
-use crate::gamestate;
 use crate::gamedata;
-use gamedata::*;
+use crate::gamestate;
+use crate::physics;
+use bevy::prelude::*;
 use bounds_deletion::*;
-use physics::*;
+use gamedata::*;
 use gamestate::*;
+use physics::*;
+use rand::{thread_rng, Rng};
 
 pub struct Pipe;
 
@@ -37,20 +37,19 @@ pub struct PipePlugin;
 
 impl Plugin for PipePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_system(spawn_pipe_system.system())
-        .add_resource(SpawnTimer {
-            timer: Timer::from_seconds(2.0, true),
-            last_pos: 0.5,
-        })
-        .add_resource(PipeSpawnSettings {
-            min_time: 0.9,
-            max_time: 1.2,
-            speed: -700.0,
-            min_pipe_distance: 300.0,
-            max_pipe_distance: 600.0,
-            max_center_delta: 0.4,
-        });
+        app.add_system(spawn_pipe_system.system())
+            .add_resource(SpawnTimer {
+                timer: Timer::from_seconds(2.0, true),
+                last_pos: 0.5,
+            })
+            .add_resource(PipeSpawnSettings {
+                min_time: 0.9,
+                max_time: 1.2,
+                speed: -700.0,
+                min_pipe_distance: 300.0,
+                max_pipe_distance: 600.0,
+                max_center_delta: 0.4,
+            });
     }
 }
 

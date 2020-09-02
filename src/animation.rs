@@ -16,11 +16,9 @@ pub struct Animations {
     pub current_animation: i32,
 }
 
-
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_system(animate_system.system());
+        app.add_system(animate_system.system());
     }
 }
 

@@ -1,9 +1,9 @@
-use bevy::prelude::*;
-use rand::{thread_rng, Rng};
-use crate::physics;
 use crate::bounds_deletion;
+use crate::physics;
+use bevy::prelude::*;
 use bounds_deletion::*;
 use physics::*;
+use rand::{thread_rng, Rng};
 
 // Spawn mountains with a delay
 pub struct MountainTimer(pub Timer);
@@ -12,9 +12,8 @@ pub struct MountainPlugin;
 
 impl Plugin for MountainPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_system(mountain_spawn_system.system())
-        .add_resource(MountainTimer(Timer::from_seconds(3.0, true)));
+        app.add_system(mountain_spawn_system.system())
+            .add_resource(MountainTimer(Timer::from_seconds(3.0, true)));
     }
 }
 

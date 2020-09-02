@@ -4,19 +4,19 @@ use bevy::{
     sprite::collide_aabb::{collide, Collision},
 };
 
-use crate::gamestate;
-use crate::gamedata;
-use crate::physics;
-use crate::screens;
-use crate::pipes;
 use crate::animation;
+use crate::gamedata;
+use crate::gamestate;
+use crate::physics;
+use crate::pipes;
+use crate::screens;
 
+use animation::*;
 use gamedata::*;
 use gamestate::*;
 use physics::*;
-use screens::*;
 use pipes::*;
-use animation::*;
+use screens::*;
 
 pub struct Player;
 pub struct JumpHeight(pub f32);
@@ -33,12 +33,11 @@ pub struct BirdPlugin;
 
 impl Plugin for BirdPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_system(player_input.system())
-        .add_system(player_bounds_system.system())
-        .add_system(player_collision_system.system())
-        .add_system(velocity_rotator_system.system())
-        .add_system(velocity_animator_system.system());
+        app.add_system(player_input.system())
+            .add_system(player_bounds_system.system())
+            .add_system(player_collision_system.system())
+            .add_system(velocity_rotator_system.system())
+            .add_system(velocity_animator_system.system());
     }
 }
 
@@ -301,4 +300,3 @@ pub fn spawn_bird(
             current_animation: 0,
         });
 }
-

@@ -6,8 +6,7 @@ pub struct BoundsDeletionPlugin;
 
 impl Plugin for BoundsDeletionPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_system(offscreen_remove_system.system());
+        app.add_system(offscreen_remove_system.system());
     }
 }
 

@@ -4,27 +4,27 @@ use bevy::{
     sprite::collide_aabb::{collide, Collision},
 };
 use rand::{thread_rng, Rng};
+mod animation;
+mod bird;
+mod bounds_deletion;
 mod clouds;
+mod gamedata;
+mod gamestate;
+mod mountains;
 mod physics;
 mod pipes;
-mod bounds_deletion;
-mod gamestate;
-mod gamedata;
-mod mountains;
-mod animation;
 mod screens;
-mod bird;
 
 use animation::*;
-use gamedata::*;
-use clouds::*;
-use pipes::*;
-use physics::*;
+use bird::*;
 use bounds_deletion::*;
+use clouds::*;
+use gamedata::*;
 use gamestate::*;
 use mountains::*;
+use physics::*;
+use pipes::*;
 use screens::*;
-use bird::*;
 
 fn main() {
     App::build()
@@ -55,7 +55,12 @@ fn setup(
     mut textures: ResMut<Assets<Texture>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    commands
-        .spawn(Camera2dComponents::default());
-    bird::spawn_bird(&mut commands, &mut asset_server, &mut materials, &mut textures, &mut texture_atlases);
+    commands.spawn(Camera2dComponents::default());
+    bird::spawn_bird(
+        &mut commands,
+        &mut asset_server,
+        &mut materials,
+        &mut textures,
+        &mut texture_atlases,
+    );
 }

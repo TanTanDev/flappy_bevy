@@ -1,14 +1,13 @@
-use bevy::prelude::*;
-use crate::physics;
-use crate::gamedata;
 use crate::bird;
+use crate::gamedata;
+use crate::physics;
 use crate::screens;
+use bevy::prelude::*;
 
 use bird::*;
-use physics::*;
 use gamedata::*;
+use physics::*;
 use screens::*;
-
 
 #[derive(std::cmp::PartialEq)]
 pub enum GameState {
@@ -21,8 +20,7 @@ pub struct GameStatePlugin;
 
 impl Plugin for GameStatePlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_system(handle_gamestate_system.system());
+        app.add_system(handle_gamestate_system.system());
     }
 }
 

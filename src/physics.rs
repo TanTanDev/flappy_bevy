@@ -9,9 +9,8 @@ pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-        .add_system(velocity_system.system())
-        .add_system(gravity_system.system());
+        app.add_system(velocity_system.system())
+            .add_system(gravity_system.system());
     }
 }
 

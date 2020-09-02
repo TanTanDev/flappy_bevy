@@ -7,8 +7,7 @@ pub struct ScreensPlugin;
 
 impl Plugin for ScreensPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app
-            .add_startup_system(setup.system());
+        app.add_startup_system(setup.system());
     }
 }
 
@@ -22,7 +21,7 @@ fn setup(
     let start_texture_handle = asset_server.load("assets/SpaceToStart.png").unwrap();
     let game_over_texture_handle = asset_server.load("assets/GameOverText.png").unwrap();
     commands
-    // Start Screen
+        // Start Screen
         .spawn(SpriteComponents {
             material: materials.add(start_texture_handle.into()),
             ..Default::default()
