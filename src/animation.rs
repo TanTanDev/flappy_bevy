@@ -23,15 +23,13 @@ impl Plugin for AnimationPlugin {
 }
 
 fn animate_system(
-    texture_atlases: Res<Assets<TextureAtlas>>,
     mut query: Query<(
         &mut Timer,
         &mut TextureAtlasSprite,
-        &Handle<TextureAtlas>,
         &mut Animations,
     )>,
 ) {
-    for (mut timer, mut sprite, texture_atlas_handle, mut animations) in &mut query.iter() {
+    for (mut timer, mut sprite, mut animations) in &mut query.iter() {
         if timer.finished {
             let current_animation_index = animations.current_animation;
             match animations

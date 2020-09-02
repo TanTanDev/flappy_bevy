@@ -1,9 +1,4 @@
-use bevy::{
-    input::{keyboard::KeyCode, Input},
-    prelude::*,
-    sprite::collide_aabb::{collide, Collision},
-};
-use rand::{thread_rng, Rng};
+use bevy::prelude::*;
 mod animation;
 mod bird;
 mod bounds_deletion;
@@ -17,7 +12,6 @@ mod screens;
 
 use animation::*;
 use bird::*;
-use bounds_deletion::*;
 use clouds::*;
 use gamedata::*;
 use gamestate::*;
@@ -51,7 +45,6 @@ fn main() {
 fn setup(
     mut commands: Commands,
     mut asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     mut textures: ResMut<Assets<Texture>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
@@ -59,7 +52,6 @@ fn setup(
     bird::spawn_bird(
         &mut commands,
         &mut asset_server,
-        &mut materials,
         &mut textures,
         &mut texture_atlases,
     );

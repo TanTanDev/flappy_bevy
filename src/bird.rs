@@ -1,7 +1,7 @@
 use bevy::{
     input::{keyboard::KeyCode, Input},
     prelude::*,
-    sprite::collide_aabb::{collide, Collision},
+    sprite::collide_aabb::{collide},
 };
 
 use crate::animation;
@@ -46,8 +46,8 @@ fn player_input(
     jump_height: Res<JumpHeight>,
     keyboard_input: Res<Input<KeyCode>>,
     _player: Mut<Player>,
-    mut translation: Mut<Translation>,
-    mut velocity: Mut<Velocity>,
+    translation: Mut<Translation>,
+    velocity: Mut<Velocity>,
 ) {
     match game_data.game_state {
         GameState::Menu => {
@@ -113,7 +113,7 @@ fn player_bounds_system(
 fn player_collision_system(
     mut commands: Commands,
     mut game_data: ResMut<GameData>,
-    mut worlds: Query<(&mut World)>,
+    mut worlds: Query<&mut World>,
     mut player_query: Query<(&Player, &Translation)>,
     mut pipe_query: Query<(&Pipe, &Translation, &Collider, &Sprite, Entity)>,
     mut score_collider_query: Query<(&Translation, &Collider, Entity)>,
@@ -177,9 +177,9 @@ fn player_collision_system(
 fn trigger_death(
     commands: &mut Commands,
     game_data: &mut ResMut<GameData>,
-    mut pipe_query: &mut Query<(&Pipe, &Translation, &Collider, &Sprite, Entity)>,
-    mut score_query: &mut Query<(&Translation, &Collider, Entity)>,
-    mut end_screen_query: &mut Query<(&EndScreen, &mut Draw)>,
+    pipe_query: &mut Query<(&Pipe, &Translation, &Collider, &Sprite, Entity)>,
+    score_query: &mut Query<(&Translation, &Collider, Entity)>,
+    end_screen_query: &mut Query<(&EndScreen, &mut Draw)>,
 ) {
     game_data.game_state = GameState::Dead;
     game_data.score = 0;
@@ -228,11 +228,10 @@ fn velocity_animator_system(mut query: Query<(&mut Animations, &Velocity)>) {
 }
 
 pub fn spawn_bird(
-    mut commands: &mut Commands,
+    commands: &mut Commands,
     asset_server: &mut Res<AssetServer>,
-    mut materials: &mut ResMut<Assets<ColorMaterial>>,
     mut textures: &mut ResMut<Assets<Texture>>,
-    mut texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
 ) {
     let texture_handle = asset_server
         .load_sync(&mut textures, "assets/bird.png")
@@ -240,7 +239,6 @@ pub fn spawn_bird(
     asset_server
         .load_sync(&mut textures, "assets/pipe.png")
         .unwrap();
-    asset_server.watch_for_changes().unwrap();
     let texture = textures.get(&texture_handle).unwrap();
     let texture_atlas = TextureAtlas::from_grid(texture_handle, texture.size, 2, 2);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);

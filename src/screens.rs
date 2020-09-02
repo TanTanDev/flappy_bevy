@@ -15,8 +15,6 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut textures: ResMut<Assets<Texture>>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let start_texture_handle = asset_server.load("assets/SpaceToStart.png").unwrap();
     let game_over_texture_handle = asset_server.load("assets/GameOverText.png").unwrap();

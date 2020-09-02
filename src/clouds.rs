@@ -1,9 +1,5 @@
 use crate::physics;
-use bevy::{
-    input::{keyboard::KeyCode, Input},
-    prelude::*,
-    sprite::collide_aabb::{collide, Collision},
-};
+use bevy::prelude::*;
 use physics::*;
 use rand::{thread_rng, Rng};
 
