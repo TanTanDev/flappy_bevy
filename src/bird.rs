@@ -236,9 +236,7 @@ pub fn spawn_bird(
     let texture_handle = asset_server
         .load_sync(&mut textures, "assets/bird.png")
         .unwrap();
-    asset_server
-        .load_sync(&mut textures, "assets/pipe.png")
-        .unwrap();
+
     let texture = textures.get(&texture_handle).unwrap();
     let texture_atlas = TextureAtlas::from_grid(texture_handle, texture.size, 2, 2);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
