@@ -10,3 +10,6 @@ edition = "2018"
 #bevy = "0.1.2"
 bevy = {git = "https://github.com/bevyengine/bevy.git", rev = "25f62f72"}
 rand = "0.7.3"
+
+# Override breaking change, transitive via bevy_asset, which auto-resolves to 5.0.0-pre.13
+notify = "=5.0.0-pre.2"
