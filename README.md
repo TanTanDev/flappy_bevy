@@ -1,4 +1,5 @@
-![](game_preview.gif)
+![](flappy_bevy_preview.gif)
+
 A game like flappy bird made for the bevy engine
 
 License
